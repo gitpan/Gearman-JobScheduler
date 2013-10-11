@@ -1,0 +1,23 @@
+v0.07   2013-10-07
+    * Moose 2.1005 requirement.
+
+v0.06   2013-10-07
+    * Handle (log) undefined arguments to run() correctly.
+
+v0.05   2013-10-07
+    * Use SHA256 hashes for GJS-generated unique job identifiers because the
+      job identifier is limited to 64 bytes by Gearman which is usually not
+      enough.
+
+v0.04   2013-09-30
+    * Ability to start multiple worker instances of a single Gearman function.
+
+v0.03   2013-09-30
+    * Gearman functions can now provide their own default configurations.
+
+v0.02   2013-09-30
+    * Moved worker helper subroutines to a separate package so that they can be
+      reused more easily.
+
+v0.01   2013-09-16
+    * Initial release.
