@@ -1,11 +1,11 @@
 =head1 NAME
 
-C<Gearman::JobScheduler> - Gearman utilities.
+C<Gearman::JobScheduler> - Gearman job scheduler utilities.
 
 =cut
 package Gearman::JobScheduler;
 
-$VERSION = '0.07';
+$VERSION = '0.08';
 
 use strict;
 use warnings;
@@ -15,9 +15,6 @@ use Gearman::JobScheduler::Configuration;
 
 use Gearman::XS qw(:constants);
 use Gearman::XS::Client;
-
-# Cancelling jobs:
-use IO::Socket::INET;
 
 # Hashref serializing / unserializing
 use Data::Compare;
@@ -121,76 +118,12 @@ sub job_status($$;$)
 }
 
 
-=head2 (static) C<cancel_gearman_job($function_name, $gearman_job_id[, $config])>
-
-(Attempt to) cancel a Gearman job.
-
-(None: the job has to be queued and not running.)
-
-Parameters:
-
-=over 4
-
-=item * Gearman function name (e.g. "NinetyNineBottlesOfBeer")
-
-=item * Gearman job ID (e.g. "H:localhost.localdomain:8")
-
-=item * (optional) Instance of Gearman::JobScheduler::Configuration
-
-=back
-
-Returns 1 if cancelling was successful, 0 otherwise.
-
-die()s on error.
-
-=cut
-sub cancel_gearman_job($$;$)
-{
-	my ($function_name, $gearman_job_handle, $config) = @_;
-
-	unless ($config) {
-		$config = Gearman::JobScheduler::_default_configuration($function_name);
-	}
-
-	my $gearman_job_id = _gearman_job_id_from_handle($gearman_job_handle);
-
-	# Neither Gearman::Client nor Gearman::XS::Client provides a helper
-	# subroutine to do this, so we'll have to cancel the job by directly
-	# connecting to all the servers
-	foreach my $server (@{$config->gearman_servers}) {
-		my ($host, $port) = split(':', $server);
-
-		$port ||= 4730;
-		$port = int($port);
-
-		my $socket = new IO::Socket::INET (
-		    PeerHost => $host,
-		    PeerPort => $port,
-		    Proto => 'tcp',
-		) or LOGDIE("Unable to connect to Gearman server: $!");
-
-		$socket->send("cancel job " . $gearman_job_id . "\r\n");
-
-		my $response = "";
-		$socket->recv($response, 1024);
-		if ($response ne "OK\r\n") {
-			WARN("Unable to cancel Gearman job '$gearman_job_id'");
-			$socket->close();
-			return 0;
-		}
-
-		$socket->close();
-	}
-
-	return 1;
-}
-
 
 =head2 (static) C<log_path_for_gearman_job($function_name, $gearman_job_handle[, $config])>
 
 Get a path to where Gearman expects to save the job's log.
 
-(Warning: the job has to running; if not, this subroutine will complain and die.)
+(Note: if the job is not running or finished, the log path will be empty.)
 
 Parameters:
 
@@ -206,6 +139,8 @@ Parameters:
 
 Returns log path where the job's log is being written, e.g.
 "/var/log/gjs/NinetyNineBottlesOfBeer/H_tundra.local_93.NinetyNineBottlesOfBeer().log"
+
+Returns C<undef> if no log path was found.
 
 die()s on error.
 
@@ -234,7 +169,8 @@ sub log_path_for_gearman_job($$;$)
 	my @log_paths = glob $log_path_glob;
 
 	if (scalar @log_paths == 0) {
-		LOGDIE("Log path not found for expression: $log_path_glob");
+		INFO("Log path not found for expression: $log_path_glob");
+		return undef;
 	}
 	if (scalar @log_paths > 1) {
 		LOGDIE("Two or more logs found for expression: $log_path_glob");
