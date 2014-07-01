@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/pypt/p5-Gearman-JobScheduler.svg?branch=master)](https://travis-ci.org/pypt/p5-Gearman-JobScheduler)
+
 # NAME
 
 `Gearman::JobScheduler::AbstractFunction` - An abstract class for a Gearman
@@ -43,16 +45,6 @@ Provides progress reports when available:
 `die()`s on error.
 
 Writes log to `STDOUT` or `STDERR` (preferably the latter).
-
-## OPTIONAL
-
-### (static) `timeout()`
-
-Return the timeout of each job.
-
-Returns the timeout (in seconds) of each job or 0 if there's no timeout.
-
-Default implementation of this subroutine returns 0 (no timeout).
 
 ### (static) `retries()`
 
@@ -201,6 +193,3 @@ Parameters:
 # TODO
 
 - code formatting
-- test timeout
-- store Gearman queue in PostgreSQL?
-- unit tests
